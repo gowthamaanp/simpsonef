@@ -1,0 +1,8 @@
+torch>=2.2
+numpy
+scipy
+pandas
+opencv-python
+Pillow
+matplotlib
+nibabel

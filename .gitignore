@@ -1,0 +1,19 @@
+# data (EchoNet-Dynamic / CAMUS must be obtained from their providers; never commit them)
+data
+data_cache/
+results/
+# training outputs other than the released networks
+checkpoints/*
+!checkpoints/shape_estimator.pt
+!checkpoints/ef_head.pt
+!checkpoints/d2s3.pt
+!checkpoints/conformal_formula.json
+# LaTeX build files
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg
+paper/*.out
+__pycache__/
+*.pyc
+node_modules/

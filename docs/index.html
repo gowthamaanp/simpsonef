@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimpsonEF</title>
+<meta name="description" content="SimpsonEF: explainable left-ventricular ejection fraction from predicted sonographer tracings and Simpson's rule. Run it in your browser on an echo video.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="coi-serviceworker.min.js"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='7' rx='4' ry='1.6' fill='%232563c9'/%3E%3Cellipse cx='16' cy='12' rx='7' ry='1.8' fill='%232563c9'/%3E%3Cellipse cx='16' cy='17' rx='9' ry='2' fill='%232563c9'/%3E%3Cellipse cx='16' cy='22' rx='9' ry='2' fill='%232563c9'/%3E%3Cellipse cx='16' cy='27' rx='7' ry='1.8' fill='%232563c9'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap head-row">
+    <a class="brand" href="#top">SimpsonEF</a>
+    <nav aria-label="Sections">
+      <a href="#demo">Try it</a><a href="#method">Method</a><a href="#results">Results</a><a href="#paper">Paper</a>
+      <a href="https://github.com/gowthamaanp/simpsonef">Code</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero wrap">
+  <p class="eyebrow">Explainable echocardiography</p>
+  <h1>Ejection fraction the way a sonographer measures it</h1>
+  <p class="lede">SimpsonEF draws the left-ventricular tracing at end-diastole and end-systole of every beat and applies Simpson's method of disks. There is no learned EF regressor: every estimate is a tracing you can see and a formula you can check.</p>
+  <p class="authors">Gowthamaan Palani, Ganapathy Krishnamurthi &middot; Department of Data Science and Artificial Intelligence, IIT Madras</p>
+  <div class="stats" role="list">
+    <div role="listitem"><span class="num">0.808</span><span class="lab">LVEF R<sup>2</sup> on all 1276 EchoNet-Dynamic test videos</span></div>
+    <div role="listitem"><span class="num">4.00</span><span class="lab">MAE in EF points, no annotated frame used</span></div>
+    <div role="listitem"><span class="num">3.4M</span><span class="lab">parameters, trained from scratch</span></div>
+    <div role="listitem"><span class="num">0.71</span><span class="lab">R<sup>2</sup> zero-shot on CAMUS</span></div>
+  </div>
+  <div class="cta"><a class="btn primary" href="#demo">Run it on a video</a><a class="btn" href="assets/simpsonef.pdf">Read the paper</a></div>
+</section>
+
+<section id="demo" class="band">
+  <div class="wrap">
+    <h2>Try it on an echo video</h2>
+    <p class="note">Load an apical 4-chamber echo clip (MP4, WebM or AVI your browser can play). The video is processed <strong>on your device</strong> and never uploaded. Research software only, not for clinical use.</p>
+    <div class="demo-grid">
+      <div class="panel">
+        <label class="drop" id="drop" for="file">
+          <input type="file" id="file" accept="video/*">
+          <span class="drop-title">Choose or drop a video</span>
+          <span class="drop-sub">The ventricle should be roughly centred; the frame is padded to a square and resized to 112 &times; 112.</span>
+        </label>
+        <video id="video" muted playsinline preload="auto" hidden></video>
+        <div class="opts">
+          <label>Seconds to analyse <input type="number" id="secs" min="1" max="20" step="1" value="8"></label>
+        </div>
+        <div class="status" id="status" aria-live="polite">Models not loaded yet.</div>
+        <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+      </div>
+      <div class="panel result" id="result" hidden>
+        <div class="ef-card">
+          <span class="ef-lab">LVEF</span>
+          <span class="ef-num" id="ef">&ndash;</span>
+          <span class="ef-int" id="efint"></span>
+        </div>
+        <div class="frames">
+          <figure><canvas id="cED" width="336" height="336"></canvas><figcaption class="ed">End-diastole <span id="fED"></span></figcaption></figure>
+          <figure><canvas id="cES" width="336" height="336"></canvas><figcaption class="es">End-systole <span id="fES"></span></figcaption></figure>
+        </div>
+        <canvas id="curve" width="720" height="170" aria-label="Left-ventricular volume over time with the detected beats"></canvas>
+        <table class="beats"><thead><tr><th>Beat</th><th>ED frame</th><th>ES frame</th><th>EF (Simpson)</th></tr></thead><tbody id="beatrows"></tbody></table>
+        <p class="note small" id="how"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="method" class="wrap">
+  <h2>How it works</h2>
+  <figure class="wide"><img src="assets/fig1_overview.png" alt="Pipeline: echo video, FrameTracer, BeatFinder on the volume curve, ED and ES windows, BeatTracer, tracings, Simpson's rule, LVEF with interval"></figure>
+  <ol class="steps">
+    <li><h3>FrameTracer</h3><p>An encoder&ndash;decoder traces the 42 points of the volume tracing (long axis and 20 chords) on every frame, applied at three scales with shared weights.</p></li>
+    <li><h3>BeatFinder</h3><p>A small bidirectional GRU reads the chord widths over time and marks end-diastole and end-systole of every beat on the volume curve.</p></li>
+    <li><h3>BeatTracer</h3><p>For each beat, the frame windows around ED and ES are read together and both tracings are drawn jointly, trained through Simpson's formula in EF units.</p></li>
+    <li><h3>Simpson's rule</h3><p>V = &pi;/4 &middot; &ell;/20 &middot; &Sigma; d<sub>i</sub><sup>2</sup> for each tracing, EF = 1 &minus; V<sub>ES</sub>/V<sub>ED</sub> per beat, median over beats, with a conformal 90% interval.</p></li>
+  </ol>
+</section>
+
+<section id="results" class="wrap">
+  <h2>Results</h2>
+  <div class="table-wrap">
+  <table class="cmp">
+    <caption>LVEF on EchoNet-Dynamic TEST as reported by each work (protocols differ). Formula: EF computed from predicted geometry by Simpson's rule.</caption>
+    <thead><tr><th>Method</th><th>Params (M)</th><th>MAE</th><th>R<sup>2</sup></th><th>EF from</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="5">Video regression</td></tr>
+      <tr><td>EchoNet-Dynamic</td><td>32</td><td>4.05</td><td>0.81</td><td>regression</td></tr>
+      <tr><td>EchoCoTr-B</td><td>21</td><td>3.98</td><td>0.81</td><td>regression</td></tr>
+      <tr><td>CoReEcho</td><td>21</td><td>3.90</td><td>0.82</td><td>regression</td></tr>
+      <tr><td>Echo-E<sup>3</sup>Net</td><td>1.54</td><td>3.93</td><td>0.82</td><td>regression</td></tr>
+      <tr class="grp"><td colspan="5">Foundation models</td></tr>
+      <tr><td>Echo-Vision-FM</td><td>&ge;86</td><td>3.87</td><td>0.825</td><td>regression</td></tr>
+      <tr><td>EchoPrime (external Stanford cohort)</td><td>35</td><td>4.14</td><td>0.79</td><td>regression</td></tr>
+      <tr><td>EchoJEPA-G (frozen probe)</td><td>1100</td><td>3.97</td><td>n.r.</td><td>regression</td></tr>
+      <tr><td>PanEcho (frozen probe)</td><td>28</td><td>5.10</td><td>n.r.</td><td>regression</td></tr>
+      <tr class="grp"><td colspan="5">Keypoints / tracings</td></tr>
+      <tr><td>EchoGraphs</td><td>27.6</td><td>4.23</td><td>0.79</td><td>regression</td></tr>
+      <tr><td>EchoGraphs</td><td>27.6</td><td>4.30</td><td>0.65</td><td>formula</td></tr>
+      <tr class="ours"><td>SimpsonEF</td><td>3.38</td><td>4.00</td><td>0.808</td><td>formula</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="two">
+    <figure><img src="assets/fig2_cases.png" alt="Four test cases with ED and ES tracings, predicted LVEF with interval and the label"><figcaption>Test cases: BeatTracer's tracing (cyan) against the sonographer's (green dashed).</figcaption></figure>
+    <figure><img src="assets/fig3_curves.png" alt="Bias by EF range and error against the fraction of most uncertain cases excluded"><figcaption>Bias by EF range, and MAE when the widest intervals are excluded.</figcaption></figure>
+  </div>
+  <figure class="narrow"><img src="assets/fig4_camus.png" alt="Zero-shot CAMUS tracings against the reference contour"><figcaption>Zero-shot on CAMUS (biplane, its own disk-height convention): R<sup>2</sup> 0.71.</figcaption></figure>
+</section>
+
+<section id="paper" class="band">
+  <div class="wrap">
+    <h2>Paper and code</h2>
+    <p><a class="btn primary" href="assets/simpsonef.pdf">PDF</a> <a class="btn" href="https://github.com/gowthamaanp/simpsonef">GitHub</a></p>
+    <pre class="cite"><code>@misc{palani2026simpsonef,
+  title  = {SimpsonEF: Explainable Ejection Fraction from Predicted
+            Sonographer Tracings and Simpson's Rule},
+  author = {Palani, Gowthamaan and Krishnamurthi, Ganapathy},
+  year   = {2026},
+  howpublished = {\url{https://github.com/gowthamaanp/simpsonef}}
+}</code></pre>
+    <p class="note small">Code: MIT licence. Model weights: research and non-commercial use only (CC BY-NC 4.0); they were trained on EchoNet-Dynamic and are subject to its research use agreement. Not a medical device; do not use for diagnosis.</p>
+  </div>
+</section>
+</main>
+
+<footer class="wrap foot">SimpsonEF &middot; IIT Madras</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.webgpu.min.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
