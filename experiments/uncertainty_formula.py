@@ -7,7 +7,7 @@ Q is its ceil((n + 1)(1 - alpha)) / n quantile on VAL and the interval is EF +- 
 baseline. Reports coverage (overall and by EF category), width, error detection by width, referral of the widest intervals and
 EF-category commit / defer, and writes results/uncertainty_formula.md and checkpoints/conformal_formula.json.
 
-Usage: python experiments/uncertainty_formula.py --val results/formula_ef_VAL_d2s3.csv --test results/formula_ef_TEST_d2s3.csv \
+Usage: python experiments/uncertainty_formula.py --val results/formula_ef_VAL.csv --test results/formula_ef_TEST.csv \
            --features data_cache/features.npz --head checkpoints/ef_head.pt
 """
 import argparse

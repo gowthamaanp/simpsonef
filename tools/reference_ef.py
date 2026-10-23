@@ -26,7 +26,7 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--n", type=int, default=20); ap.add_argument("--out", required=True); a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True); dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pipe = Pipeline(os.path.join(ROOT, "checkpoints/shape_estimator.pt"), os.path.join(ROOT, "checkpoints/ef_head.pt"), None, device=str(dev))
-    net = load_shape_estimator(os.path.join(ROOT, "checkpoints/d2s3.pt"), dev); off = checkpoint_offsets(os.path.join(ROOT, "checkpoints/d2s3.pt"))
+    net = load_shape_estimator(os.path.join(ROOT, "checkpoints/beattracer.pt"), dev); off = checkpoint_offsets(os.path.join(ROOT, "checkpoints/beattracer.pt"))
     Q = json.load(open(os.path.join(ROOT, "checkpoints/conformal_formula.json")))["Q90"]
     import pandas as pd
     m = pd.read_csv(os.path.join(ROOT, "data", "master.csv")); keys = m[m.Split == "TEST"].FileName.values[:a.n]

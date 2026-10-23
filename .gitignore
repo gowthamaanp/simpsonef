@@ -6,7 +6,7 @@ results/
 checkpoints/*
 !checkpoints/shape_estimator.pt
 !checkpoints/ef_head.pt
-!checkpoints/d2s3.pt
+!checkpoints/beattracer.pt
 !checkpoints/conformal_formula.json
 # LaTeX build files
 paper/*.aux
@@ -17,3 +17,7 @@ paper/*.out
 __pycache__/
 *.pyc
 node_modules/
+
+# per-video predictions contain EchoNet / CAMUS labels: never commit them
+baselines/**/*.csv
+baselines/preds/

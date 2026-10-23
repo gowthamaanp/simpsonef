@@ -30,9 +30,9 @@
   <p class="lede">SimpsonEF draws the left-ventricular tracing at end-diastole and end-systole of every beat and applies Simpson's method of disks. There is no learned EF regressor: every estimate is a tracing you can see and a formula you can check.</p>
   <p class="authors">Gowthamaan Palani, Ganapathy Krishnamurthi &middot; Department of Data Science and Artificial Intelligence, IIT Madras</p>
   <div class="stats" role="list">
-    <div role="listitem"><span class="num">0.808</span><span class="lab">LVEF R<sup>2</sup> on all 1276 EchoNet-Dynamic test videos</span></div>
+    <div role="listitem"><span class="num">0.806</span><span class="lab">LVEF R<sup>2</sup> on all 1277 EchoNet-Dynamic test videos</span></div>
     <div role="listitem"><span class="num">4.00</span><span class="lab">MAE in EF points, no annotated frame used</span></div>
-    <div role="listitem"><span class="num">3.4M</span><span class="lab">parameters, trained from scratch</span></div>
+    <div role="listitem"><span class="num">4.5M</span><span class="lab">parameters, trained from scratch</span></div>
     <div role="listitem"><span class="num">0.71</span><span class="lab">R<sup>2</sup> zero-shot on CAMUS</span></div>
   </div>
   <div class="cta"><a class="btn primary" href="#demo">Run it on a video</a><a class="btn" href="assets/simpsonef.pdf">Read the paper</a></div>
@@ -41,12 +41,12 @@
 <section id="demo" class="band">
   <div class="wrap">
     <h2>Try it on an echo video</h2>
-    <p class="note">Load an apical 4-chamber echo clip (MP4, WebM or AVI your browser can play). The video is processed <strong>on your device</strong> and never uploaded. Research software only, not for clinical use.</p>
+    <p class="note">Load an apical 4-chamber echo clip as an <strong>MP4</strong> file (H.264). The video is processed <strong>on your device</strong> and never uploaded. Research software only, not for clinical use.</p>
     <div class="demo-grid">
       <div class="panel">
         <label class="drop" id="drop" for="file">
-          <input type="file" id="file" accept="video/*">
-          <span class="drop-title">Choose or drop a video</span>
+          <input type="file" id="file" accept="video/mp4,.mp4">
+          <span class="drop-title">Choose or drop an MP4 video</span>
           <span class="drop-sub">The ventricle should be roughly centred; the frame is padded to a square and resized to 112 &times; 112.</span>
         </label>
         <video id="video" muted playsinline preload="auto" hidden></video>
@@ -89,29 +89,30 @@
   <h2>Results</h2>
   <div class="table-wrap">
   <table class="cmp">
-    <caption>LVEF on EchoNet-Dynamic TEST as reported by each work (protocols differ). Formula: EF computed from predicted geometry by Simpson's rule.</caption>
-    <thead><tr><th>Method</th><th>Params (M)</th><th>MAE</th><th>R<sup>2</sup></th><th>EF from</th></tr></thead>
+    <caption>LVEF: MAE and R<sup>2</sup> on EchoNet-Dynamic TEST, and R<sup>2</sup> on CAMUS (zero-shot; SimpsonEF uses biplane Simpson, the other models average their 4- and 2-chamber predictions). Details and caveats in the paper.</caption>
+    <thead><tr><th>Method</th><th>Params (M)</th><th>MAE</th><th>R<sup>2</sup></th><th>CAMUS R<sup>2</sup></th></tr></thead>
     <tbody>
-      <tr class="grp"><td colspan="5">Video regression</td></tr>
-      <tr><td>EchoNet-Dynamic</td><td>32</td><td>4.05</td><td>0.81</td><td>regression</td></tr>
-      <tr><td>EchoCoTr-B</td><td>21</td><td>3.98</td><td>0.81</td><td>regression</td></tr>
-      <tr><td>CoReEcho</td><td>21</td><td>3.90</td><td>0.82</td><td>regression</td></tr>
-      <tr><td>Echo-E<sup>3</sup>Net</td><td>1.54</td><td>3.93</td><td>0.82</td><td>regression</td></tr>
-      <tr class="grp"><td colspan="5">Foundation models</td></tr>
-      <tr><td>Echo-Vision-FM</td><td>&ge;86</td><td>3.87</td><td>0.825</td><td>regression</td></tr>
-      <tr><td>EchoPrime (external Stanford cohort)</td><td>35</td><td>4.14</td><td>0.79</td><td>regression</td></tr>
-      <tr><td>EchoJEPA-G (frozen probe)</td><td>1100</td><td>3.97</td><td>n.r.</td><td>regression</td></tr>
-      <tr><td>PanEcho (frozen probe)</td><td>28</td><td>5.10</td><td>n.r.</td><td>regression</td></tr>
-      <tr class="grp"><td colspan="5">Keypoints / tracings</td></tr>
-      <tr><td>EchoGraphs</td><td>27.6</td><td>4.23</td><td>0.79</td><td>regression</td></tr>
-      <tr><td>EchoGraphs</td><td>27.6</td><td>4.30</td><td>0.65</td><td>formula</td></tr>
-      <tr class="ours"><td>SimpsonEF</td><td>3.38</td><td>4.00</td><td>0.808</td><td>formula</td></tr>
+      <tr class="grp"><td colspan="5">Run by us from released weights, on the same 1277 TEST videos and zero-shot on 50 CAMUS patients</td></tr>
+      <tr class="ours"><td>SimpsonEF (formula)</td><td>4.48</td><td>4.01</td><td>0.806</td><td>0.710</td></tr>
+      <tr><td>EchoNet-Dynamic</td><td>31.3</td><td>4.01</td><td>0.815</td><td>0.079</td></tr>
+      <tr><td>Echo-E<sup>3</sup>Net</td><td>1.76</td><td>3.92</td><td>0.819</td><td>&minus;0.303</td></tr>
+      <tr><td>EchoGNN</td><td>1.7</td><td>4.46</td><td>0.758</td><td>&minus;0.178</td></tr>
+      <tr><td>PanEcho (zero-shot)</td><td>42.0</td><td>5.47</td><td>0.600</td><td>0.283</td></tr>
+      <tr><td>EchoPrime (zero-shot)</td><td>123.1</td><td>7.78</td><td>0.210</td><td>&minus;1.832</td></tr>
+      <tr><td>EchoCLIP (zero-shot)</td><td>151.5</td><td>11.51</td><td>&minus;0.387</td><td>0.072</td></tr>
+      <tr><td>EchoFM-L (frozen, probe)</td><td>344.5</td><td>5.64</td><td>0.627</td><td>0.100</td></tr>
+      <tr><td>EchoJEPA-L (frozen, probe)</td><td>303.9</td><td>5.48</td><td>0.630</td><td>&minus;0.099</td></tr>
+      <tr class="grp"><td colspan="5">Published figures (no released weights)</td></tr>
+      <tr><td>EchoCoTr-B</td><td>21</td><td>3.98</td><td>0.81</td><td>&ndash;</td></tr>
+      <tr><td>CoReEcho</td><td>21</td><td>3.90</td><td>0.82</td><td>&ndash;</td></tr>
+      <tr><td>EchoGraphs (regression)</td><td>27.6</td><td>4.23</td><td>0.79</td><td>&ndash;</td></tr>
+      <tr><td>EchoGraphs (Simpson on keypoints)</td><td>27.6</td><td>4.30</td><td>0.65</td><td>&ndash;</td></tr>
     </tbody>
   </table>
   </div>
   <div class="two">
-    <figure><img src="assets/fig2_cases.png" alt="Four test cases with ED and ES tracings, predicted LVEF with interval and the label"><figcaption>Test cases: BeatTracer's tracing (cyan) against the sonographer's (green dashed).</figcaption></figure>
-    <figure><img src="assets/fig3_curves.png" alt="Bias by EF range and error against the fraction of most uncertain cases excluded"><figcaption>Bias by EF range, and MAE when the widest intervals are excluded.</figcaption></figure>
+    <figure><img src="assets/fig2_cases.png" alt="Eight test cases with ED and ES tracings, the DeepLabV3 mask, predicted LVEF with interval and the label"><figcaption>Test cases: BeatTracer's tracing (cyan), DeepLabV3's mask (magenta) and the sonographer's tracing (green dashed).</figcaption></figure>
+    <figure><img src="assets/fig3_summary.png" alt="Bland-Altman plot, error against the fraction of most uncertain cases excluded, and zero-shot CAMUS tracings"><figcaption>Bland&ndash;Altman on TEST, MAE when the widest intervals are excluded, and zero-shot CAMUS tracings.</figcaption></figure>
   </div>
   <figure class="narrow"><img src="assets/fig4_camus.png" alt="Zero-shot CAMUS tracings against the reference contour"><figcaption>Zero-shot on CAMUS (biplane, its own disk-height convention): R<sup>2</sup> 0.71.</figcaption></figure>
 </section>

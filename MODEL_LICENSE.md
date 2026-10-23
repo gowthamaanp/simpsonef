@@ -1,6 +1,6 @@
 # Model weights licence
 
-The trained networks in `checkpoints/` (`shape_estimator.pt`, `d2s3.pt`, `ef_head.pt`, `conformal_formula.json`) and their ONNX
+The trained networks in `checkpoints/` (`shape_estimator.pt`, `beattracer.pt`, `ef_head.pt`, `conformal_formula.json`) and their ONNX
 exports in `docs/models/` are released under the **Creative Commons Attribution-NonCommercial 4.0 International** licence
 (CC BY-NC 4.0), for **research and non-commercial use only**.
 

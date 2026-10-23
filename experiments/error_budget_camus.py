@@ -37,7 +37,7 @@ def native_mask(P, shape):
 
 
 def main():
-    pipe = Pipeline(os.path.join(ROOT, "checkpoints/shape_estimator.pt"), os.path.join(ROOT, "checkpoints/ef_head.pt"), os.path.join(ROOT, "checkpoints/conformal_final.json"))
+    pipe = Pipeline(os.path.join(ROOT, "checkpoints/shape_estimator.pt"), os.path.join(ROOT, "checkpoints/ef_head.pt"), None)
     nd = os.path.join(cz.CAMUS, "database_nifti"); diam = cz.reference_simpson()
     pats = [l.strip() for l in open(os.path.join(cz.CAMUS, "database_split", "subgroup_testing.txt")) if l.strip()]
     rows = []

@@ -2,7 +2,7 @@
  *   frames (T x 112 x 112, uint8 grey) -> FrameTracer on every frame -> chords -> BeatFinder -> ED / ES of every beat
  *   -> BeatTracer on each beat's ED and ES windows -> Simpson's rule per beat -> median over beats -> conformal 90% interval.
  * Points use the tracing convention of EchoNet-Dynamic: x = column + 1, y = 112 - row.
- * The browser demo does not apply the 15-copy input averaging of the paper (TEST R2 0.801 instead of 0.808). */
+ * The browser demo does not apply the 15-copy input averaging of the paper (TEST R2 0.805 instead of 0.806). */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.SimpsonEF = factory();

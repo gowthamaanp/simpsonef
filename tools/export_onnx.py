@@ -61,7 +61,7 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--out", default="docs/models"); a = ap.parse_args()
     out = os.path.join(ROOT, a.out); os.makedirs(out, exist_ok=True)
     cpu = torch.device("cpu")
-    for name, ck in (("frametracer", "checkpoints/shape_estimator.pt"), ("beattracer", "checkpoints/d2s3.pt")):
+    for name, ck in (("frametracer", "checkpoints/shape_estimator.pt"), ("beattracer", "checkpoints/beattracer.pt")):
         net = load_shape_estimator(os.path.join(ROOT, ck), cpu).eval()
         c = net.in_ch if hasattr(net, "in_ch") else torch.load(os.path.join(ROOT, ck), map_location="cpu", weights_only=False)["in_ch"]
         torch.onnx.export(Tracer(net), torch.rand(2, c, 112, 112), os.path.join(out, f"{name}.onnx"), input_names=["frames"],
@@ -73,7 +73,7 @@ def main():
     print("beatfinder exported")
     conf = json.load(open(os.path.join(ROOT, "checkpoints/conformal_formula.json")))
     cfg = {"frametracer_offsets": checkpoint_offsets(os.path.join(ROOT, "checkpoints/shape_estimator.pt")),
-           "beattracer_offsets": checkpoint_offsets(os.path.join(ROOT, "checkpoints/d2s3.pt")),
+           "beattracer_offsets": checkpoint_offsets(os.path.join(ROOT, "checkpoints/beattracer.pt")),
            "fps": 50, "size": 112, "peak_prominence": 0.1, "conformal_Q90": conf["Q90"],
            "interval": "EF +- Q90 * ((q95 - q05) / 2 + |EF_formula - EF_beatfinder|), EF in points"}
     json.dump(cfg, open(os.path.join(out, "config.json"), "w"), indent=1)

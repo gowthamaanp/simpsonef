@@ -12,7 +12,7 @@ pipeline unchanged. Reported:
                  EF error, coverage of the 90% interval calibrated on EchoNet VAL, and the share of cases deferred / referred
 References: the CAMUS EF label (Info_*.cfg).
 
-Usage: python experiments/camus_zeroshot.py --ckpt checkpoints/shape_estimator.pt --head checkpoints/ef_head.pt --conformal checkpoints/conformal_final.json
+Usage: python experiments/camus_zeroshot.py --ckpt checkpoints/shape_estimator.pt --head checkpoints/ef_head.pt
 """
 import argparse
 import os
@@ -77,12 +77,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="checkpoints/shape_estimator.pt")
     ap.add_argument("--head", default="checkpoints/ef_head.pt")
-    ap.add_argument("--conformal", default="checkpoints/conformal_final.json")
+    ap.add_argument("--conformal", default="")
     ap.add_argument("--prep", choices=["pad", "sector"], default="pad", help="pad: zero-pad to a square; sector: crop to the sector's bounding box and stretch to 112 x 112 (as EchoNet frames are)")
     ap.add_argument("--split", default="testing", choices=["testing"], help="only the CAMUS test split is used")
     ap.add_argument("--out", default="results/camus_zeroshot")
     args = ap.parse_args()
-    pipe = Pipeline(os.path.join(ROOT, args.ckpt), os.path.join(ROOT, args.head), os.path.join(ROOT, args.conformal))
+    pipe = Pipeline(os.path.join(ROOT, args.ckpt), os.path.join(ROOT, args.head), os.path.join(ROOT, args.conformal) if args.conformal else None)
     nd = os.path.join(CAMUS, "database_nifti"); diam = reference_simpson()
     pats = [l.strip() for l in open(os.path.join(CAMUS, "database_split", f"subgroup_{args.split}.txt")) if l.strip()]
     rows = []

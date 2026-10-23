@@ -82,6 +82,7 @@
   }
 
   async function analyseFile(file) {
+    if (!/\.mp4$/i.test(file.name) && file.type !== "video/mp4") { status("Please choose an MP4 file (H.264); other formats are not supported.", 0); return; }
     try {
       $("result").hidden = true;
       await loadModels();

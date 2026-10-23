@@ -106,6 +106,7 @@ def report(nm, p, y):
 
 FEATS, DET = ["data_cache/features.npz"], ["checkpoints/ef_head.pt"]
 SPLIT, DUMP = ["TEST"], [""]
+PTS, DUMP_PTS = [], [""]
 TSHIFT = [0]
 
 
@@ -150,6 +151,8 @@ def echonet(net, offsets, dev):
                 simex_out.setdefault(t_, []).append(np.median((a_ + b_ * t_).reshape(len(beats), len(sh)).mean(1)))
             simex_slope.append(np.median(b_))
         PP = pair_points(net, frames, prs + [(int(z["ed"][ix[k]]), int(z["es"][ix[k]]))], offsets, dev)
+        if DUMP_PTS[0]:
+            PTS.append((z['keys'][ix[k]], np.asarray(PP[-1]).copy()))
         d, a = chord_widths(PP); d, a = np.asarray(d), np.asarray(a)
         v = (d ** 2).sum(-1) * a; efs = 100 * (1 - v[:, 1] / v[:, 0])
         for ph, pt in (("ED", PP[-1, 0]), ("ES", PP[-1, 1])):                  # Dice at the annotated frames vs the released masks
@@ -160,6 +163,8 @@ def echonet(net, offsets, dev):
         fin.append(np.median(be)); fin_mean.append(be.mean()); ann.append(efs[-1])
         nbt.append(len(be)); bsd.append(float(np.median(np.abs(be - np.median(be)))) * 1.4826 if len(be) > 1 else np.nan); keys.append(z["keys"][ix[k]])
     fin, ann = np.array(fin), np.array(ann)
+    if DUMP_PTS[0]:                                                          # tracings at the annotated frames (ED, ES)
+        np.savez(DUMP_PTS[0], keys=np.array([k for k, _ in PTS]), pts=np.stack([p for _, p in PTS]))
     print(f"EchoNet {SPLIT[0]}, all {len(y)} videos")
     if DUMP[0]:
         import pandas as pd
@@ -180,9 +185,9 @@ def echonet(net, offsets, dev):
 
 
 def camus(net, offsets, dev):
-    pipe = Pipeline(os.path.join(ROOT, "checkpoints/shape_estimator.pt"), os.path.join(ROOT, "checkpoints/ef_head_half.pt"), os.path.join(ROOT, "checkpoints/conformal_final.json"))
+    pipe = Pipeline(os.path.join(ROOT, "checkpoints/shape_estimator.pt"), os.path.join(ROOT, "checkpoints/ef_head.pt"), None)
     nd = os.path.join(cz.CAMUS, "database_nifti")
-    pats = [l.strip() for l in open(os.path.join(cz.CAMUS, "database_split", "subgroup_testing.txt")) if l.strip()]
+    pats = [l.strip() for l in open(os.path.join(cz.CAMUS, "database_split", os.environ.get("CAMUS_SUBSET", "subgroup_testing") + ".txt")) if l.strip()]
     out, y, fb = {"biplane": [], "4CH": [], "2CH": []}, [], 0
     for p in pats:
         dd = {}
@@ -216,9 +221,10 @@ def main():
     ap.add_argument("--tta-set", default="standard", choices=["standard", "large"], help="large: 7 scales x 5 rotations")
     ap.add_argument("--split", default="TEST", choices=["VAL", "TEST"])
     ap.add_argument("--dump", default="", help="write per-video EF, label, number of beats and beat-to-beat spread (robust SD) to this CSV")
+    ap.add_argument("--dump-points", default="", help="save the tracings at the annotated ED/ES frames to this .npz")
     ap.add_argument("--simex", default="", help="noise levels for simulation-extrapolation, e.g. 0,1,2 (reports EF extrapolated to levels <= 0)")
     ap.add_argument("--only", choices=["echonet", "camus", "both"], default="both"); a = ap.parse_args()
-    FEATS[0], DET[0], SPLIT[0], DUMP[0] = a.features, a.det, a.split, a.dump
+    FEATS[0], DET[0], SPLIT[0], DUMP[0], DUMP_PTS[0] = a.features, a.det, a.split, a.dump, a.dump_points
     if a.simex:
         SIMEX["levels"] = [float(v) for v in a.simex.split(",")]
     TSHIFT[:] = [int(v) for v in a.tshift.split(",")]

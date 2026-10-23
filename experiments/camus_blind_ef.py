@@ -27,12 +27,13 @@ HEAD = sys.argv[sys.argv.index("--head") + 1] if "--head" in sys.argv else "chec
 DETECTOR = "--detector" in sys.argv
 NOPAIR = []
 MODE = "detector" if DETECTOR else "volume extremes"
+DUMP = sys.argv[sys.argv.index("--dump") + 1] if "--dump" in sys.argv else ""
 
 
 def main():
-    pipe = Pipeline(os.path.join(ROOT, CKPT), os.path.join(ROOT, HEAD), os.path.join(ROOT, "checkpoints/conformal_final.json"))
+    pipe = Pipeline(os.path.join(ROOT, CKPT), os.path.join(ROOT, HEAD), None)      # EF only; no interval needed
     nd = os.path.join(cz.CAMUS, "database_nifti")
-    pats = [l.strip() for l in open(os.path.join(cz.CAMUS, "database_split", "subgroup_testing.txt")) if l.strip()]
+    pats = [l.strip() for l in open(os.path.join(cz.CAMUS, "database_split", os.environ.get("CAMUS_SUBSET", "subgroup_testing") + ".txt")) if l.strip()]
     rows = []
     for p in pats:
         v = {}
@@ -60,6 +61,9 @@ def main():
         r["ef_biplane"] = 100 * (1 - (d4[s4] * d2[s2]).sum() / (d4[e4] * d2[e2]).sum())               # same common height in both phases cancels
         rows.append(r)
     y = np.array([r["label"] for r in rows])
+    if DUMP:
+        import pandas as pd
+        pd.DataFrame(rows).to_csv(DUMP, index=False)
     for k, nm in (("ef_biplane", "biplane, CAMUS protocol"), ("ef_4CH", "4CH only"), ("ef_2CH", "2CH only")):
         pr = np.array([r[k] for r in rows])
         print(f"CAMUS zero-shot, all {len(y)} test patients, blind ED/ES ({MODE}), {nm}: R2 {r2(pr, y):.3f}  MAE {np.abs(pr - y).mean():.2f}  r {np.corrcoef(pr, y)[0, 1]:.3f}  bias {(pr - y).mean():+.2f}")
