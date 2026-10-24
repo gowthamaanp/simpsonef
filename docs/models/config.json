@@ -32,6 +32,7 @@
  "fps": 50,
  "size": 112,
  "peak_prominence": 0.1,
- "conformal_Q90": 0.8389212666001233,
- "interval": "EF +- Q90 * ((q95 - q05) / 2 + |EF_formula - EF_beatfinder|), EF in points"
+ "conformal_Q90": 0.8543990912411858,
+ "interval": "EF +- Q90 * ((q95 - q05) / 2 + |EF_formula - EF_beatfinder|), EF in points",
+ "fallback": "no ED -> ES pair: frames of largest and smallest FrameTracer volume"
 }

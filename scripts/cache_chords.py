@@ -1,10 +1,9 @@
-"""Cache the chord widths of every frame of every labelled EchoNet video (TRAIN, VAL, TEST) for the temporal head.
+"""Cache FrameTracer's chords on every frame of every labelled EchoNet video (TRAIN, VAL, TEST), the input of BeatFinder.
 
-Per frame: the 20 chord widths and the long-axis length, in pixels, from the points predicted by ShapeEstimator (a checkpoint
-that was trained with neighbouring frames gets them as input channels, clipped at the clip ends). Flat storage: feats
-(total_frames, 21) float16; offsets (n_videos + 1); video i occupies rows offsets[i]:offsets[i + 1].
+Per frame: the 20 chord widths and the long-axis length, in pixels, from FrameTracer's points (13-frame window, clamped at the
+clip ends). Flat storage: feats (total_frames, 21) float16; offsets (n_videos + 1); video i occupies rows offsets[i]:offsets[i + 1].
 
-Usage: python experiments/cache_features.py --ckpt checkpoints/shape_estimator.pt --out data_cache/features.npz
+Usage: python scripts/cache_chords.py --ckpt checkpoints/frametracer.pt --out data_cache/chords.npz
 """
 import argparse
 import os
@@ -18,8 +17,8 @@ import pandas as pd
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from geometry import chord_widths  # noqa: E402
-from shape_estimator import checkpoint_offsets, load_shape_estimator  # noqa: E402
+from frametracer import load_tracer  # noqa: E402
+from simpson import chord_widths  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 D = os.path.join(ROOT, "data")
@@ -44,15 +43,13 @@ def decode(key):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="checkpoints/shape_estimator.pt")
-    ap.add_argument("--out", default="data_cache/features.npz")
+    ap.add_argument("--ckpt", default="checkpoints/frametracer.pt")
+    ap.add_argument("--out", default="data_cache/chords.npz")
     ap.add_argument("--chunk", type=int, default=128)
-    ap.add_argument("--pair-self", action="store_true", help="the checkpoint is a pair network trained with single-frame mode: feed (window, window) and read the first tracing")
     args = ap.parse_args()
     dev = torch.device("cuda")
-    net = load_shape_estimator(os.path.join(ROOT, args.ckpt), dev)
-    offsets = np.array(checkpoint_offsets(os.path.join(ROOT, args.ckpt)))
-    trace = (lambda x: net(torch.cat([x, x], 1))[:, :42]) if args.pair_self else net
+    net, offsets = load_tracer(os.path.join(ROOT, args.ckpt), dev)
+    offsets = np.array(offsets)
 
     m = pd.read_csv(os.path.join(D, "master.csv")).dropna(subset=["ED_Frame", "ES_Frame", "EF"])
     m = m[m.Split.isin(["TRAIN", "VAL", "TEST"])]
@@ -68,7 +65,7 @@ def main():
             x = torch.from_numpy(fr[ctx]).float().div_(255.0)
             fo = []
             for j in range(0, len(x), args.chunk):
-                d, axis = chord_widths(trace(x[j:j + args.chunk].to(dev)))
+                d, axis = chord_widths(net(x[j:j + args.chunk].to(dev)))
                 fo.append(torch.cat([d, axis[:, None]], 1).half().cpu())
             feats.append(torch.cat(fo).numpy()); lens.append(len(fr))
             keys.append(key); splits.append(r.Split); ed.append(int(r.ED_Frame)); es.append(int(r.ES_Frame)); ef.append(float(r.EF))

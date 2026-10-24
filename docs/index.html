@@ -17,7 +17,7 @@
   <div class="wrap head-row">
     <a class="brand" href="#top">SimpsonEF</a>
     <nav aria-label="Sections">
-      <a href="#demo">Try it</a><a href="#method">Method</a><a href="#results">Results</a><a href="#paper">Paper</a>
+      <a href="#demo">Try it</a><a href="#see">Tracings</a><a href="#method">Method</a><a href="#results">Results</a><a href="#paper">Paper</a>
       <a href="https://github.com/gowthamaanp/simpsonef">Code</a>
     </nav>
   </div>
@@ -30,8 +30,8 @@
   <p class="lede">SimpsonEF draws the left-ventricular tracing at end-diastole and end-systole of every beat and applies Simpson's method of disks. There is no learned EF regressor: every estimate is a tracing you can see and a formula you can check.</p>
   <p class="authors">Gowthamaan Palani, Ganapathy Krishnamurthi &middot; Department of Data Science and Artificial Intelligence, IIT Madras</p>
   <div class="stats" role="list">
-    <div role="listitem"><span class="num">0.806</span><span class="lab">LVEF R<sup>2</sup> on all 1277 EchoNet-Dynamic test videos</span></div>
-    <div role="listitem"><span class="num">4.00</span><span class="lab">MAE in EF points, no annotated frame used</span></div>
+    <div role="listitem"><span class="num">0.804</span><span class="lab">LVEF R<sup>2</sup> on all 1277 EchoNet-Dynamic test videos</span></div>
+    <div role="listitem"><span class="num">4.02</span><span class="lab">MAE in EF points, no annotated frame used</span></div>
     <div role="listitem"><span class="num">4.5M</span><span class="lab">parameters, trained from scratch</span></div>
     <div role="listitem"><span class="num">0.71</span><span class="lab">R<sup>2</sup> zero-shot on CAMUS</span></div>
   </div>
@@ -44,14 +44,24 @@
     <p class="note">Load an apical 4-chamber echo clip as an <strong>MP4</strong> file (H.264). The video is processed <strong>on your device</strong> and never uploaded. Research software only, not for clinical use.</p>
     <div class="demo-grid">
       <div class="panel">
+        <fieldset class="mode">
+          <legend>Method</legend>
+          <label><input type="radio" name="mode" id="mode-single" checked> Single plane <span class="small">(apical 4-chamber, EchoNet-Dynamic convention, with a 90% interval)</span></label>
+          <label><input type="radio" name="mode" id="mode-bi"> Biplane <span class="small">(apical 4- and 2-chamber of the same heart, CAMUS convention)</span></label>
+        </fieldset>
         <label class="drop" id="drop" for="file">
           <input type="file" id="file" accept="video/mp4,.mp4">
-          <span class="drop-title">Choose or drop an MP4 video</span>
+          <span class="drop-title" id="drop-title">Choose or drop an MP4 video</span>
           <span class="drop-sub">The ventricle should be roughly centred; the frame is padded to a square and resized to 112 &times; 112.</span>
         </label>
-        <video id="video" muted playsinline preload="auto" hidden></video>
+        <label class="drop" id="drop2" for="file2" hidden>
+          <input type="file" id="file2" accept="video/mp4,.mp4">
+          <span class="drop-title">Apical 2-chamber MP4</span>
+          <span class="drop-sub">Same heart as the 4-chamber clip.</span>
+        </label>
         <div class="opts">
           <label>Seconds to analyse <input type="number" id="secs" min="1" max="20" step="1" value="8"></label>
+          <button type="button" class="btn primary" id="run">Analyse</button>
         </div>
         <div class="status" id="status" aria-live="polite">Models not loaded yet.</div>
         <div class="bar" aria-hidden="true"><span id="bar"></span></div>
@@ -62,15 +72,21 @@
           <span class="ef-num" id="ef">&ndash;</span>
           <span class="ef-int" id="efint"></span>
         </div>
-        <div class="frames">
-          <figure><canvas id="cED" width="336" height="336"></canvas><figcaption class="ed">End-diastole <span id="fED"></span></figcaption></figure>
-          <figure><canvas id="cES" width="336" height="336"></canvas><figcaption class="es">End-systole <span id="fES"></span></figcaption></figure>
-        </div>
-        <canvas id="curve" width="720" height="170" aria-label="Left-ventricular volume over time with the detected beats"></canvas>
+        <div class="players" id="players"></div>
         <table class="beats"><thead><tr><th>Beat</th><th>ED frame</th><th>ES frame</th><th>EF (Simpson)</th></tr></thead><tbody id="beatrows"></tbody></table>
         <p class="note small" id="how"></p>
       </div>
     </div>
+    <p class="note small">The same analysis runs offline with <code>python run.py a4c.mp4 --out traced.mp4</code> (add <code>--biplane a2c.mp4</code> for biplane); it writes the whole video with the tracings overlaid, as MP4 or GIF.</p>
+  </div>
+</section>
+
+<section id="see" class="wrap" data-gif-section>
+  <h2>Every frame, every chord</h2>
+  <p class="lede small">SimpsonEF's output is the tracing itself. FrameTracer draws it on every frame (cyan); on each beat's end-diastole (green) and end-systole (orange) BeatTracer redraws it, and Simpson's rule on those two tracings gives the beat's EF.</p>
+  <div class="gifs">
+    <figure><img src="assets/demo_a4c.gif" alt="Apical 4-chamber echo with SimpsonEF's tracing, chords and long axis on every frame, and the volume curve with the detected beats" loading="lazy" onerror="this.closest('figure').remove(); if (!document.querySelector('[data-gif-section] figure')) document.querySelector('[data-gif-section]').hidden = true;"><figcaption>Single plane, an EchoNet-Dynamic TEST video (never seen in training): FrameTracer on every frame (cyan), BeatTracer at ED (green) and ES (orange).</figcaption></figure>
+    <figure><img src="assets/demo_biplane.gif" alt="Apical 4- and 2-chamber views with SimpsonEF's tracings for biplane Simpson" loading="lazy" onerror="this.closest('figure').remove(); if (!document.querySelector('[data-gif-section] figure')) document.querySelector('[data-gif-section]').hidden = true;"><figcaption>Biplane: apical 4- and 2-chamber.</figcaption></figure>
   </div>
 </section>
 
@@ -93,7 +109,7 @@
     <thead><tr><th>Method</th><th>Params (M)</th><th>MAE</th><th>R<sup>2</sup></th><th>CAMUS R<sup>2</sup></th></tr></thead>
     <tbody>
       <tr class="grp"><td colspan="5">Run by us from released weights, on the same 1277 TEST videos and zero-shot on 50 CAMUS patients</td></tr>
-      <tr class="ours"><td>SimpsonEF (formula)</td><td>4.48</td><td>4.01</td><td>0.806</td><td>0.710</td></tr>
+      <tr class="ours"><td>SimpsonEF (formula)</td><td>4.48</td><td>4.02</td><td>0.804</td><td>0.710</td></tr>
       <tr><td>EchoNet-Dynamic</td><td>31.3</td><td>4.01</td><td>0.815</td><td>0.079</td></tr>
       <tr><td>Echo-E<sup>3</sup>Net</td><td>1.76</td><td>3.92</td><td>0.819</td><td>&minus;0.303</td></tr>
       <tr><td>EchoGNN</td><td>1.7</td><td>4.46</td><td>0.758</td><td>&minus;0.178</td></tr>

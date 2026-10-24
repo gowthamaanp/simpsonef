@@ -1,4 +1,4 @@
-"""Check that augment_similarity (experiments/train_shape_estimator.py) moves the image and the tracing points by the same transform.
+"""Check that augment_similarity (scripts/train_tracer.py) moves the image and the tracing points by the same transform.
 
 Draw the mask of real tracing polygons, warp it with the augmentation, and compare with the mask drawn from the transformed points
 (Dice > 0.95); also check that the transform is the stated one (rotation about the image centre, isotropic scale, shift).
@@ -13,10 +13,10 @@ import numpy as np
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from geometry import pixel_grid, soft_membership  # noqa: E402
+from simpson import contour_to_mask  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-_spec = importlib.util.spec_from_file_location("tr", os.path.join(ROOT, "experiments", "train_shape_estimator.py"))
+_spec = importlib.util.spec_from_file_location("tr", os.path.join(ROOT, "scripts", "train_tracer.py"))
 tr = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(tr)
 
 
@@ -26,12 +26,11 @@ def main():
     z = np.load(os.path.join(ROOT, "data_cache", "records.npz"), allow_pickle=True)
     ix = np.where(z["valid"])[0][::200][:60]
     pts = torch.tensor(z["poly"][ix], device=dev)
-    grid = pixel_grid(112, dev)
-    mask = soft_membership(pts, grid).reshape(-1, 1, 112, 112)
+    mask = torch.tensor(np.stack([contour_to_mask(p) for p in pts.cpu().numpy()]), dtype=torch.float32, device=dev)[:, None]
 
     warped, pts2 = tr.augment_similarity(mask, pts)
     a = warped.reshape(len(ix), -1) > 0.5
-    m2 = soft_membership(pts2, grid) > 0.5
+    m2 = torch.tensor(np.stack([contour_to_mask(p) for p in pts2.cpu().numpy()]), device=dev).reshape(len(ix), -1)
     dice = (2 * (a & m2).sum(1) / (a.sum(1) + m2.sum(1)).clamp(min=1)).float()
     print(f"Dice(warped mask, mask of the transformed points): mean {float(dice.mean()):.4f}, min {float(dice.min()):.4f}")
     assert float(dice.min()) > 0.95, "image warp and point transform disagree"

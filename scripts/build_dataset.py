@@ -5,7 +5,7 @@ tracing polygon [A1, L1..L20, R20..R1, A2] in decoder coordinates (x = column + 
 (the long axis and 20 chords); in a few frames several complete tracings are stacked (42, 63, ... rows). Those records have
 valid = False and are never used for training.
 
-Usage: python experiments/build_dataset.py
+Usage: python scripts/build_dataset.py
 """
 import os
 

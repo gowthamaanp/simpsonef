@@ -4,10 +4,14 @@ data_cache/
 results/
 # training outputs other than the released networks
 checkpoints/*
-!checkpoints/shape_estimator.pt
-!checkpoints/ef_head.pt
+!checkpoints/frametracer.pt
+!checkpoints/beatfinder.pt
 !checkpoints/beattracer.pt
-!checkpoints/conformal_formula.json
+!checkpoints/conformal.json
+# output videos of run.py
+*.mp4
+*.webm
+!docs/assets/*.mp4
 # LaTeX build files
 paper/*.aux
 paper/*.log

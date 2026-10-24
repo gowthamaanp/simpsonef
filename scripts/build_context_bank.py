@@ -3,7 +3,7 @@
 For each record the frames at (annotated index + offset) are stored, clipped to the video, so the network sees motion. Writes
 data_cache/context_frames.npz: frames (N, len(offsets), 112, 112) uint8 and the offsets; the offset-0 channel is the annotated frame.
 
-Usage: python experiments/build_context_bank.py [--offsets=-24,-20,...,24]
+Usage: python scripts/build_context_bank.py [--offsets=-24,-20,...,24]
 """
 import argparse
 import os

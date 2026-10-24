@@ -1,48 +1,46 @@
 #!/usr/bin/env bash
-# Rebuild every network of the final pipeline from the raw data, then evaluate. All runs use seed 0 (Python, NumPy, PyTorch CPU
-# and GPU are seeded; GPU kernels are not bit-exact, so a rerun matches the reported numbers up to normal run-to-run variation);
-# every checkpoint stores its full configuration under "config".
+# Rebuild the three SimpsonEF networks from the raw data, then evaluate. All runs use seed 0 (Python, NumPy, PyTorch CPU and GPU
+# are seeded; GPU kernels are not bit-exact, so a rerun matches the reported numbers up to normal run-to-run variation); every
+# checkpoint stores its full configuration under "config".
 #
-#   Network A  single-frame scale-space tracer (13-frame window)   -> per-frame chords
-#   BiGRU      ED / ES frame detector on Network A's chord sequence -> the beats
-#   Network B  pair tracer (ED window + ES window, 13 frames each) -> ED and ES tracings -> Simpson formula -> EF
+#   FrameTracer  13-frame window -> 42 points on every frame          (width 24, scanner-style degradations)
+#   BeatFinder   BiGRU on FrameTracer's chords -> ED / ES of every beat (+ EF quantiles for the interval)
+#   BeatTracer   ED window + ES window -> both tracings -> Simpson's rule (width 32, no degradations, then the EF-unit stage)
 #
-# EchoNet-Dynamic is expected in data/ (Videos/, VolumeTracings.csv, master.csv), CAMUS in data/camus/CAMUS_public (or CAMUS_DIR).
-# TRAIN is used for training, VAL only for checkpoint selection, TEST and CAMUS only for the final evaluation.
+# EchoNet-Dynamic is expected in data/ (Videos/, FileList.csv, master.csv, VolumeTracings.csv, annotation/Masks/), CAMUS in
+# data/camus/CAMUS_public (or CAMUS_DIR). TRAIN trains, VAL selects checkpoints and calibrates the interval, TEST and CAMUS are
+# only evaluated.
 set -euo pipefail
 cd "$(dirname "$0")"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 SEED=0
-STAGES=${STAGES:-"data a b eval"}        # e.g. STAGES="a" ./reproduce.sh to rebuild only Network A and the BiGRU
+STAGES=${STAGES:-"data frame beat eval"}     # e.g. STAGES="eval" ./reproduce.sh to evaluate the released checkpoints only
 has() { [[ " $STAGES " == *" $1 "* ]]; }
 
-# Data: tracing records, and the frame windows around every annotated frame (13 frames, step 4).
+# Data: one record per annotated frame, and the 13 frames (offsets -24..24, step 4) around every annotated frame.
 if has data; then
-python experiments/build_dataset.py
-python experiments/build_context_bank.py --out data_cache/context_frames.npz
+python scripts/build_dataset.py
+python scripts/build_context_bank.py --out data_cache/context_frames.npz
 fi
 
-# Network A and the BiGRU frame detector.
-if has a; then
-python experiments/train_shape_estimator.py --arch scalespace --width 24 --epochs 40 --ema 0.999 --dropout 0.1 \
-    --scale-range 0.5,2.5 --batch-size 32 --seed $SEED --out checkpoints/net_a.pt
-python experiments/cache_features.py --ckpt checkpoints/net_a.pt --out data_cache/features_net_a.npz
-python experiments/train_heads.py --features data_cache/features_net_a.npz --seed $SEED --out checkpoints/bigru.pt
+# FrameTracer (40 epochs), its chords on every frame, BeatFinder (16 epochs).
+if has frame; then
+python scripts/train_tracer.py --seed $SEED --out checkpoints/frametracer.pt
+python scripts/cache_chords.py --ckpt checkpoints/frametracer.pt --out data_cache/chords.npz
+python scripts/train_beatfinder.py --chords data_cache/chords.npz --seed $SEED --out checkpoints/beatfinder.pt
 fi
 
-# Network B (BeatTracer): pair pretraining at width 32 without scanner-style degradations, then one EF-unit formula-loss stage
-# (EF loss in EF units, weighted by inverse sqrt EF-bin frequency; no dropout). This variant was selected on VAL among all archived
-# variants (full pipeline, highest VAL R2); see baselines/review/ablation_val.py.
-if has b; then
-B="--arch scalespace --width 32 --pair --ema 0.999 --batch-size 32 --scanner-prob 0 --seed $SEED"
-python experiments/train_shape_estimator.py $B --epochs 40 --dropout 0.1 --scale-range 0.5,2.5 --out checkpoints/net_b_pre.pt
-python experiments/train_shape_estimator.py $B --w-ef 40 --epochs 12 --lr 1.0e-4 --dropout 0.0 --init checkpoints/net_b_pre.pt --out checkpoints/net_b.pt
+# BeatTracer: pair pretraining (40 epochs), then the EF-unit formula-loss stage (12 epochs, lr 1e-4, no dropout).
+if has beat; then
+B="--pair --width 32 --scanner-prob 0 --seed $SEED"
+python scripts/train_tracer.py $B --out checkpoints/beattracer_pre.pt
+python scripts/train_tracer.py $B --w-ef 40 --epochs 12 --lr 1e-4 --dropout 0 --init checkpoints/beattracer_pre.pt --out checkpoints/beattracer.pt
 fi
 
-# Evaluation: EchoNet TEST (all videos; ED/ES from Network A + BiGRU; tracings from Network B; 15-copy test-time averaging;
-# formula EF per beat, median over beats) and CAMUS test zero-shot (Network A + BiGRU on the released half-sequences).
+# Evaluation with src/pipeline.py (the code run.py uses): VAL, the conformal calibration on VAL, TEST once, CAMUS zero-shot.
 if has eval; then
-python experiments/eval_pair.py --ckpt checkpoints/net_b.pt --features data_cache/features_net_a.npz --det checkpoints/bigru.pt \
-    --only echonet --tta
-python experiments/camus_blind_ef.py --detector --ckpt checkpoints/net_a.pt --head checkpoints/bigru.pt
+python scripts/eval_echonet.py --split VAL
+python scripts/eval_echonet.py --split TEST
+python scripts/conformal.py --val results/echonet_VAL.csv --test results/echonet_TEST.csv
+python scripts/eval_camus.py
 fi
