@@ -9,8 +9,7 @@
      Interval: EF +- Q * s, s = (q95 - q05) / 2 + |EF - EF_BeatFinder|, Q calibrated on EchoNet VAL (conformal.py).
   4'. Biplane (CAMUS convention): the 4- and 2-chamber views are run separately through steps 1-2, FrameTracer's ED and ES
      tracings of each view give the chord widths, and EF = 1 - sum a_ES b_ES / sum a_ED b_ED (one disk height for both phases).
-     FrameTracer, not BeatTracer, is the biplane tracer: the choice was made on the CAMUS training patients. No interval is
-     reported (the calibration is for single-plane EchoNet EF).
+     FrameTracer, not BeatTracer, is the biplane tracer. No interval is reported (the calibration is for single-plane EchoNet EF).
 
 Frames are grayscale uint8 (T, 112, 112); read_video() zero-pads any other frame size to a square and resizes it.
 """
@@ -152,7 +151,7 @@ class SimpsonEF:
 
         Each view: FrameTracer on every frame, BeatFinder beats. The i-th beat of one view is paired with the i-th beat of the
         other (a released CAMUS half-sequence has exactly one) and the median over pairs is the EF. tracer="beat" uses BeatTracer's
-        tracings instead of FrameTracer's (not the paper's choice)."""
+        tracings instead of FrameTracer's."""
         views = {}
         for name, fr in (("4CH", frames_4ch), ("2CH", frames_2ch)):
             P = self.frame_tracings(fr)

@@ -3,8 +3,7 @@ definition (src/pipeline.py SimpsonEF.analyse_biplane, as run.py --biplane uses 
 
 Each view's half-sequence is zero-padded to a square and resized to 112 x 112 (aspect ratio kept). Reported: biplane EF (one disk
 height for ED and ES), 4- and 2-chamber single-plane EF, and the Dice of FrameTracer's tracing at the annotated ED / ES frames
-against the CAMUS LV cavity (label 1). The tracer for the biplane EF (FrameTracer, not BeatTracer) was chosen on the 400 CAMUS
-training patients (--subset subgroup_training), whose labels serve only this choice.
+against the CAMUS LV cavity (label 1).
 
 Usage: python scripts/eval_camus.py [--camus data/camus/CAMUS_public] [--tracer frame|beat] [--subset subgroup_testing]
 """
